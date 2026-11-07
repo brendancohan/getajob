@@ -1,0 +1,26 @@
+[Unit]
+Description=Nightly Automated Job Scraping & AI Triage Pipeline
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Set to the user's project directory
+WorkingDirectory=/path/to/your/job-search-workspace
+
+# Step 1: Ensure scraping dependencies are up-to-date
+ExecStartPre=/path/to/your/venv/bin/pip install --upgrade python-jobspy
+
+# Step 2: Scrape fresh listings across Indeed, LinkedIn, ZipRecruiter, Glassdoor
+# Ingests new jobs into tracking.csv as 'Status: Unscreened'
+ExecStart=/path/to/your/venv/bin/python scripts/job_scraper.py
+
+# Step 3: AI agent automatically evaluates all newly added 'Unscreened' jobs
+# Evaluates against base_resume.md and criteria.md in batches of 25
+ExecStartPost=/path/to/your/venv/bin/python scripts/ai_triage.py Unscreened 25
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
