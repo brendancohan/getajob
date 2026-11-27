@@ -1,0 +1,27 @@
+# Nightly Automated Job Scraping & AI Triage Pipeline (Windows)
+# Update $WorkspaceDir to match your local job-search workspace.
+
+$ErrorActionPreference = "Stop"
+
+$WorkspaceDir = "C:\path\to\your\job-search-workspace"
+$VenvDir = Join-Path $WorkspaceDir "venv"
+$PipExe = Join-Path $VenvDir "Scripts\pip.exe"
+$PythonExe = Join-Path $VenvDir "Scripts\python.exe"
+$LogFile = Join-Path $WorkspaceDir "job-pipeline.log"
+
+Set-Location $WorkspaceDir
+Start-Transcript -Path $LogFile -Append
+
+try {
+    Write-Output "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Upgrading python-jobspy..."
+    & $PipExe install --upgrade python-jobspy
+
+    Write-Output "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Running job_scraper.py..."
+    & $PythonExe "scripts\job_scraper.py"
+
+    Write-Output "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Running ai_triage.py..."
+    & $PythonExe "scripts\ai_triage.py" Unscreened 25
+}
+finally {
+    Stop-Transcript
+}

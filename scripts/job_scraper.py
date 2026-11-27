@@ -22,11 +22,35 @@ except ImportError:
 CSV_FILE = "tracking.csv"
 
 # Primary search queries (e.g. your target job titles)
+# Phase 1: Moonlighting & Consulting + Phase 2: Senior Leadership Roles
 SEARCH_QUERIES = [
-    "Senior Systems Engineer",
-    "Integration Engineer",
-    "Solutions Architect",
-    "Implementation Engineer"
+    # Primary Target Roles (Current Level - Senior)
+    "Senior PACS Administrator",
+    "Senior Imaging Systems Analyst",
+    "Enterprise Imaging Engineer",
+    "Health IT Integration Engineer",
+    "Implementation Engineer",
+    
+    # Next-Level Roles (Phase 2 - Senior Leadership)
+    "Principal Imaging Systems Engineer",
+    "Principal PACS Engineer",
+    "IT Infrastructure Lead Healthcare",
+    "Enterprise Imaging Program Manager",
+    "Technical Product Manager Healthcare",
+    "Senior Solutions Architect Healthcare",
+    
+    # Vendor-Specific Searches
+    "Mach7 VNA",
+    "Hyland Acuo VNA",
+    "Intelerad IntelePACS",
+    "Sectra IDS7",
+    "Nuance PowerScribe",
+    "Epic Radiant",
+    
+    # Healthcare IT Infrastructure & Automation
+    "Healthcare Infrastructure Consultant",
+    "Enterprise Imaging Infrastructure",
+    "Health IT Systems Engineer"
 ]
 
 # Supported job boards

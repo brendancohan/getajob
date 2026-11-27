@@ -16,7 +16,7 @@ This skill provides a complete, reusable operational framework for automating th
 The pipeline operates on a decoupled two-stage architecture:
 
 ```
-[ Automated Nightly Pipeline (Cron / Systemd @ 2:00 AM) ]
+[ Automated Nightly Pipeline (Systemd / Cron / Windows Task Scheduler @ 2:00 AM) ]
        │
        ▼
 [ Stage 1: Ingestion (`scripts/job_scraper.py`) ]
@@ -63,7 +63,9 @@ my-job-search/
     ├── master_cover_letter.template.md
     ├── tracking.template.csv
     ├── job-pipeline.service.template
-    └── job-pipeline.timer.template
+    ├── job-pipeline.timer.template
+    ├── run-job-pipeline.ps1.template
+    └── register-windows-task.ps1.template
 ```
 
 ---
@@ -74,9 +76,18 @@ When a new user imports this skill, guide them through the following setup steps
 
 ### Step 1: Environment & Dependencies
 Create a dedicated Python virtual environment and install required packages:
+
+**Linux / macOS (Bash):**
 ```bash
 python3 -m venv venv
 source venv/bin/activate
+pip install python-jobspy pandas pypandoc markdown beautifulsoup4 requests
+```
+
+**Windows (PowerShell):**
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install python-jobspy pandas pypandoc markdown beautifulsoup4 requests
 ```
 
@@ -91,7 +102,9 @@ pip install python-jobspy pandas pypandoc markdown beautifulsoup4 requests
    * Specific quantifiable achievements and metrics (e.g., cost savings, efficiency gains, team size).
    * Key project deliverables that substantiate senior compensation.
 3. Initialize `tracking.csv` using `templates/tracking.template.csv`.
-4. Create the `applications/` output folder: `mkdir -p applications`.
+4. Create the `applications/` output folder:
+   * **Linux / macOS:** `mkdir -p applications`
+   * **Windows (PowerShell):** `New-Item -ItemType Directory -Force -Path applications`
 
 ### Step 3: Configure Scripts
 * Copy `scripts/job_scraper.py` and customize `SEARCH_QUERIES`, `SEARCH_LOCATIONS`, and lookback hours (`HOURS_LOOKBACK = 72` or `168`).
@@ -146,10 +159,11 @@ When the user reviews a `Pending` listing and chooses to **Proceed**, execute th
 
 ---
 
-## ⚙️ Scheduling Automation (Systemd / Cron)
+## ⚙️ Scheduling Automation (Systemd / Cron / Windows Task Scheduler)
 
 To run the pipeline hands-free nightly at 2:00 AM:
 
+### Linux (Systemd)
 1. Copy `templates/job-pipeline.service.template` to `~/.config/systemd/user/job-pipeline.service` and replace paths.
 2. Copy `templates/job-pipeline.timer.template` to `~/.config/systemd/user/job-pipeline.timer`.
 3. Enable and start the timer:
@@ -160,6 +174,17 @@ To run the pipeline hands-free nightly at 2:00 AM:
 4. Check status:
    ```bash
    systemctl --user list-timers
+   ```
+
+### Windows (Task Scheduler)
+1. Copy `templates/run-job-pipeline.ps1.template` to `run-job-pipeline.ps1` in your workspace and update `$WorkspaceDir`.
+2. Copy `templates/register-windows-task.ps1.template` to `register-windows-task.ps1`, update `$ScriptPath`, and run it in PowerShell:
+   ```powershell
+   .\register-windows-task.ps1
+   ```
+3. Check status:
+   ```powershell
+   Get-ScheduledTask -TaskName JobSearchPipeline
    ```
 
 ---

@@ -12,7 +12,7 @@ An end-to-end, model-agnostic agentic workflow and skill designed for **OpenCode
 ## 🏗️ How It Works (The 2-Stage Pipeline)
 
 ```
-[ Automated Nightly Schedule (Systemd / Cron @ 2:00 AM) ]
+[ Automated Nightly Schedule (Systemd / Cron / Windows Task Scheduler @ 2:00 AM) ]
        │
        ▼
 [ Stage 1: Ingestion (`scripts/job_scraper.py`) ]
@@ -56,7 +56,9 @@ getajob/
     ├── master_cover_letter.template.md  # Standardized cover letter template
     ├── tracking.template.csv            # Central lifecycle database schema
     ├── job-pipeline.service.template    # Systemd oneshot background service definition
-    └── job-pipeline.timer.template      # Systemd 2:00 AM calendar timer definition
+    ├── job-pipeline.timer.template      # Systemd 2:00 AM calendar timer definition
+    ├── run-job-pipeline.ps1.template    # Windows PowerShell runner script
+    └── register-windows-task.ps1.template # Windows Task Scheduler registration script
 ```
 
 ---
@@ -67,16 +69,28 @@ getajob/
 
 #### **For OpenCode Users:**
 Install globally in your user configuration:
-```bash
-git clone git@github.com:brendancohan/getajob.git ~/.config/opencode/skills/job-search-pipeline
-```
+
+* **Linux / macOS (Bash):**
+  ```bash
+  git clone git@github.com:brendancohan/getajob.git ~/.config/opencode/skills/job-search-pipeline
+  ```
+* **Windows (PowerShell):**
+  ```powershell
+  git clone git@github.com:brendancohan/getajob.git "$env:USERPROFILE\.config\opencode\skills\job-search-pipeline"
+  ```
 *Or install locally in a project directory under `.opencode/skills/job-search-pipeline`.*
 
 #### **For Claude Code Users:**
 Install globally in your Claude skills directory:
-```bash
-git clone git@github.com:brendancohan/getajob.git ~/.claude/skills/job-search-pipeline
-```
+
+* **Linux / macOS (Bash):**
+  ```bash
+  git clone git@github.com:brendancohan/getajob.git ~/.claude/skills/job-search-pipeline
+  ```
+* **Windows (PowerShell):**
+  ```powershell
+  git clone git@github.com:brendancohan/getajob.git "$env:USERPROFILE\.claude\skills\job-search-pipeline"
+  ```
 *Or install locally in a project directory under `.claude/skills/job-search-pipeline`.*
 
 ---
@@ -86,21 +100,38 @@ git clone git@github.com:brendancohan/getajob.git ~/.claude/skills/job-search-pi
 In your local job search project folder:
 
 1. **Create and activate a Python virtual environment:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install python-jobspy pandas pypandoc markdown beautifulsoup4 requests
-   ```
+   * **Linux / macOS (Bash):**
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     pip install python-jobspy pandas pypandoc markdown beautifulsoup4 requests
+     ```
+   * **Windows (PowerShell):**
+     ```powershell
+     python -m venv venv
+     .\venv\Scripts\Activate.ps1
+     pip install python-jobspy pandas pypandoc markdown beautifulsoup4 requests
+     ```
 
 2. **Establish your profile and tracking files:**
-   ```bash
-   # Copy templates into your workspace root
-   cp templates/base_resume.template.md base_resume.md
-   cp templates/criteria.template.md criteria.md
-   cp templates/tracking.template.csv tracking.csv
-   mkdir -p applications scripts
-   cp scripts/* scripts/
-   ```
+   * **Linux / macOS (Bash):**
+     ```bash
+     # Copy templates into your workspace root
+     cp templates/base_resume.template.md base_resume.md
+     cp templates/criteria.template.md criteria.md
+     cp templates/tracking.template.csv tracking.csv
+     mkdir -p applications scripts
+     cp scripts/* scripts/
+     ```
+   * **Windows (PowerShell):**
+     ```powershell
+     # Copy templates into your workspace root
+     Copy-Item templates\base_resume.template.md base_resume.md
+     Copy-Item templates\criteria.template.md criteria.md
+     Copy-Item templates\tracking.template.csv tracking.csv
+     New-Item -ItemType Directory -Force -Path applications, scripts
+     Copy-Item scripts\* scripts\
+     ```
 
 3. **Calibrate your profile:**
    * Edit `criteria.md` with your target roles, desired salary range, target tech stack, and hard disqualifiers.
@@ -131,10 +162,11 @@ In your local job search project folder:
 
 ---
 
-### 4. Hands-Free Nightly Automation (Linux / Systemd)
+### 4. Hands-Free Nightly Automation (Linux / Systemd & Windows / Task Scheduler)
 
 To have your system automatically scrape and evaluate fresh jobs while you sleep:
 
+#### **Linux (Systemd)**
 1. Copy the systemd templates to your user service directory:
    ```bash
    mkdir -p ~/.config/systemd/user
@@ -146,6 +178,13 @@ To have your system automatically scrape and evaluate fresh jobs while you sleep
    ```bash
    systemctl --user daemon-reload
    systemctl --user enable --now job-pipeline.timer
+   ```
+
+#### **Windows (Task Scheduler)**
+1. Copy `templates\run-job-pipeline.ps1.template` to `run-job-pipeline.ps1` in your workspace and update `$WorkspaceDir`.
+2. Copy `templates\register-windows-task.ps1.template` to `register-windows-task.ps1`, update `$ScriptPath`, and run it in PowerShell:
+   ```powershell
+   .\register-windows-task.ps1
    ```
 
 ---

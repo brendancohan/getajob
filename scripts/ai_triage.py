@@ -10,6 +10,7 @@ from 0 to 100, and updates tracking.csv.
 import json
 import os
 import sys
+import shutil
 import subprocess
 import re
 import time
@@ -81,8 +82,18 @@ Respond ONLY with a valid JSON array of objects in this exact format (no markdow
 
 def query_llm_batch(prompt):
     """Executes a prompt using OpenCode non-interactive CLI runner."""
-    cmd = [OPENCODE_BIN, "run", "--", prompt]
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
+    resolved_bin = shutil.which(OPENCODE_BIN) or OPENCODE_BIN
+    cmd = [resolved_bin, "run"]
+    res = subprocess.run(
+        cmd,
+        input=prompt,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=120,
+    )
     
     if res.returncode != 0:
         raise RuntimeError(f"OpenCode execution error (code {res.returncode}): {res.stderr}")
@@ -101,7 +112,7 @@ def run_triage(target_status="Unscreened", batch_size=BATCH_SIZE):
         return
 
     resume_text, criteria_text = load_context()
-    df = pd.read_csv(CSV_FILE)
+    df = pd.read_csv(CSV_FILE, encoding="utf-8")
 
     pending_indices = list(df[df["Status"] == target_status].index)
     total_jobs = len(pending_indices)
@@ -168,7 +179,7 @@ def run_triage(target_status="Unscreened", batch_size=BATCH_SIZE):
                     skipped_total += 1
 
         # Save progress after every batch
-        df.to_csv(CSV_FILE, index=False)
+        df.to_csv(CSV_FILE, index=False, encoding="utf-8")
         print(f"  -> Progress saved: {promoted_total} Qualified (>=70), {skipped_total} Skipped (<70)")
 
     print("\n==========================================")
