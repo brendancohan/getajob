@@ -14,6 +14,8 @@ import shutil
 import subprocess
 import re
 import time
+import urllib.request
+import urllib.error
 import pandas as pd
 
 # --- CONFIGURATION (Adjust relative or absolute paths as needed) ---
@@ -23,8 +25,13 @@ CRITERIA_FILE = "criteria.md"
 MIN_FIT_SCORE = 70
 BATCH_SIZE = 25
 
-# Path to opencode executable or local LLM runner
+# Supported backends: "opencode" (default), "claude", "codex", "openai"
+TRIAGE_BACKEND = os.environ.get("TRIAGE_BACKEND", "opencode").strip().lower()
 OPENCODE_BIN = os.environ.get("OPENCODE_BIN", "opencode")
+CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "claude")
+CODEX_BIN = os.environ.get("CODEX_BIN", "codex")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1/chat/completions")
 
 def load_context():
     """Loads base resume and search criteria for LLM evaluation."""
@@ -80,25 +87,71 @@ Respond ONLY with a valid JSON array of objects in this exact format (no markdow
   ...
 ]"""
 
-def query_llm_batch(prompt):
-    """Executes a prompt using OpenCode non-interactive CLI runner."""
-    resolved_bin = shutil.which(OPENCODE_BIN) or OPENCODE_BIN
-    cmd = [resolved_bin, "run"]
-    res = subprocess.run(
-        cmd,
-        input=prompt,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=120,
-    )
-    
-    if res.returncode != 0:
-        raise RuntimeError(f"OpenCode execution error (code {res.returncode}): {res.stderr}")
+def _query_openai_api(prompt):
+    """Executes a prompt using the OpenAI Chat Completions REST API."""
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is required when TRIAGE_BACKEND=openai.")
 
-    raw_output = res.stdout.strip()
+    payload = json.dumps({
+        "model": os.environ.get("OPENAI_MODEL", OPENAI_MODEL),
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        os.environ.get("OPENAI_BASE_URL", OPENAI_BASE_URL),
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"OpenAI API error (HTTP {e.code}): {err_body[:300]}") from e
+
+    return data["choices"][0]["message"]["content"].strip()
+
+def query_llm_batch(prompt):
+    """Executes a prompt using the configured LLM backend (opencode, claude, codex, or openai)."""
+    backend = os.environ.get("TRIAGE_BACKEND", TRIAGE_BACKEND).strip().lower()
+
+    if backend == "openai":
+        raw_output = _query_openai_api(prompt)
+    else:
+        cli_map = {
+            "opencode": (os.environ.get("OPENCODE_BIN", OPENCODE_BIN), ["run"]),
+            "claude": (os.environ.get("CLAUDE_BIN", CLAUDE_BIN), ["-p"]),
+            "codex": (os.environ.get("CODEX_BIN", CODEX_BIN), ["exec", "-"]),
+        }
+        if backend not in cli_map:
+            raise ValueError(
+                f"Unsupported TRIAGE_BACKEND '{backend}'. Expected one of: opencode, claude, codex, openai."
+            )
+        bin_name, args = cli_map[backend]
+        resolved_bin = shutil.which(bin_name) or bin_name
+        cmd = [resolved_bin, *args]
+        res = subprocess.run(
+            cmd,
+            input=prompt,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=120,
+        )
+
+        if res.returncode != 0:
+            raise RuntimeError(f"{backend} execution error (code {res.returncode}): {res.stderr}")
+
+        raw_output = res.stdout.strip()
+
     json_match = re.search(r"\[[\s\S]*\]", raw_output)
     if not json_match:
         raise ValueError(f"No JSON array found in output: {raw_output[:200]}")

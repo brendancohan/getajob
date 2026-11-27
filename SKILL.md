@@ -109,6 +109,7 @@ pip install python-jobspy pandas pypandoc markdown beautifulsoup4 requests
 ### Step 3: Configure Scripts
 * Copy `scripts/job_scraper.py` and customize `SEARCH_QUERIES`, `SEARCH_LOCATIONS`, and lookback hours (`HOURS_LOOKBACK = 72` or `168`).
 * Copy `scripts/ai_triage.py` to the project root or `scripts/` directory.
+* Set `TRIAGE_BACKEND` if not using the default `opencode` CLI: supported values are `opencode`, `claude`, `codex`, and `openai` (which uses `OPENAI_API_KEY`, plus optional `OPENAI_MODEL` and `OPENAI_BASE_URL`).
 
 ---
 

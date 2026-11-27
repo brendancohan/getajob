@@ -5,7 +5,28 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-green.svg)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An end-to-end, model-agnostic agentic workflow and skill designed for **OpenCode**, **Claude Code**, and autonomous coding agents. It automates the entire job search lifecycle: **multi-platform job scraping**, **batched AI qualification triage**, **structured CSV database tracking**, and **tailored ATS-optimized application generation (Markdown + Word `.docx`)**.
+An end-to-end, model-agnostic agentic workflow and skill designed for **OpenCode**, **Claude Code**, **OpenAI Codex CLI**, **ChatGPT**, and autonomous coding agents. It automates the entire job search lifecycle: **multi-platform job scraping**, **batched AI qualification triage**, **structured CSV database tracking**, and **tailored ATS-optimized application generation (Markdown + Word `.docx`)**.
+
+---
+
+## ⚡ Quickstart: Copy-Paste Prompt for Your AI Agent
+
+Paste this prompt into **OpenCode**, **Claude Code**, **Codex CLI**, or your preferred coding agent inside an empty job-search folder:
+
+```text
+Set up the job-search-pipeline skill in this workspace and walk me through personalizing it:
+
+1. Detect my OS (Linux/macOS vs Windows) and clone https://github.com/brendancohan/getajob.git into the appropriate skills directory for you (or into ./.agents/skills/job-search-pipeline if unsure).
+2. Initialize the workspace:
+   - Create a Python virtual environment (`venv`) and install: python-jobspy pandas pypandoc markdown beautifulsoup4 requests
+   - Create `applications/` and `scripts/`, copy `scripts/*` into `scripts/`, and copy `templates/base_resume.template.md`, `templates/criteria.template.md`, and `templates/tracking.template.csv` to `base_resume.md`, `criteria.md`, and `tracking.csv`.
+3. Guide me through personal configuration one step at a time:
+   - Ask for my existing resume or career history (including quantifiable metrics and key projects) and populate `base_resume.md`.
+   - Ask for my target job titles, salary floor/target, core tech stack, location/remote preferences, and hard disqualifiers, then populate `criteria.md`.
+   - Update `SEARCH_QUERIES`, `SEARCH_LOCATIONS`, and `HOURS_LOOKBACK` in `scripts/job_scraper.py` to match my criteria.
+   - Ask which triage backend I want `scripts/ai_triage.py` to use (`opencode`, `claude`, `codex`, or `openai` API) and verify it is configured.
+4. Run a quick verification check on the scripts and ask if I want to enable nightly automation (Systemd on Linux or Task Scheduler on Windows).
+```
 
 ---
 
@@ -93,6 +114,25 @@ Install globally in your Claude skills directory:
   ```
 *Or install locally in a project directory under `.claude/skills/job-search-pipeline`.*
 
+#### **For OpenAI Codex CLI Users:**
+Install globally in your Codex skills directory:
+
+* **Linux / macOS (Bash):**
+  ```bash
+  git clone git@github.com:brendancohan/getajob.git ~/.codex/skills/job-search-pipeline
+  ```
+* **Windows (PowerShell):**
+  ```powershell
+  git clone git@github.com:brendancohan/getajob.git "$env:USERPROFILE\.codex\skills\job-search-pipeline"
+  ```
+*Or install locally in a project directory under `.agents/skills/job-search-pipeline`.*
+
+#### **For ChatGPT (Web / Desktop App) Users:**
+ChatGPT in the browser or desktop app cannot run local cron/Task Scheduler jobs, so use it as a **ChatGPT Project**:
+1. Create a new **Project** and paste the **AI Triage Rules** and **Application Tailoring SOP** from `SKILL.md` into **Project Instructions**.
+2. Upload `base_resume.md`, `criteria.md`, and `templates/master_cover_letter.template.md` as **Project Files**.
+3. Run `python scripts/job_scraper.py` locally (or paste job descriptions directly), upload `tracking.csv` to the Project for batch scoring, and let ChatGPT's built-in Python/Code Interpreter export tailored `.docx` resumes directly.
+
 ---
 
 ### 2. Workspace Initialization
@@ -147,8 +187,20 @@ In your local job search project folder:
   python scripts/job_scraper.py
   ```
 * **Run the AI Triage Agent:**
+  `ai_triage.py` defaults to `opencode`, and also supports `claude`, `codex`, or `openai` (REST API) via `TRIAGE_BACKEND`:
   ```bash
+  # Default (opencode)
   python scripts/ai_triage.py Unscreened 25
+
+  # Or choose another backend (Linux / macOS)
+  TRIAGE_BACKEND=codex python scripts/ai_triage.py Unscreened 25
+  TRIAGE_BACKEND=claude python scripts/ai_triage.py Unscreened 25
+  TRIAGE_BACKEND=openai OPENAI_API_KEY=sk-... python scripts/ai_triage.py Unscreened 25
+  ```
+  ```powershell
+  # Windows (PowerShell)
+  $env:TRIAGE_BACKEND="codex"; python scripts\ai_triage.py Unscreened 25
+  $env:TRIAGE_BACKEND="openai"; $env:OPENAI_API_KEY="sk-..."; python scripts\ai_triage.py Unscreened 25
   ```
 * **Pair Program with OpenCode or Claude:**
   Open your assistant in your project directory:
